@@ -1,1 +1,1 @@
-# PhilWeather ETL 🇵🇭☀️🌧️
+# PhilWeather ETL
