@@ -4,7 +4,7 @@
 
 ## Progress Checklist
 
-- [ ] Phase 1 — Project Foundations & Environment Setup
+- [x] Phase 1 — Project Foundations & Environment Setup
 - [ ] Phase 2 — Extraction Layer
 - [ ] Phase 3 — Data Validation Layer
 - [ ] Phase 4 — Bronze Load Layer
