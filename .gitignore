@@ -41,3 +41,4 @@ airflow/airflow-worker.pid
 Thumbs.db
 .vscode/
 .idea/
+.claude/agents/nemotron-3-ultra-550b-a55b.agent.md
