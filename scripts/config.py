@@ -6,10 +6,30 @@ Loads settings from environment variables and optional .env file.
 """
 
 from functools import lru_cache
-from typing import List, Union
+from typing import Annotated, List, Union
 
 from pydantic import Field, field_validator
+from pydantic.functional_validators import BeforeValidator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def parse_cities_list(v: Union[str, List[str]]) -> List[str]:
+    """Parse a comma-separated string or JSON array into a list of city strings."""
+    if isinstance(v, str):
+        v = v.strip()
+        # Try JSON first (for ["a","b"] format)
+        if v.startswith("[") and v.endswith("]"):
+            import json
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                pass
+        # Fall back to comma-separated
+        return [city.strip() for city in v.split(",") if city.strip()]
+    return v
+
+
+CitiesList = Annotated[List[str], BeforeValidator(parse_cities_list)]
 
 
 class Settings(BaseSettings):
@@ -48,7 +68,7 @@ class Settings(BaseSettings):
     )
 
     # Pipeline Settings
-    cities_list: List[str] = Field(
+    cities_list: CitiesList = Field(
         default_factory=lambda: [
             "Manila",
             "Cebu",
@@ -57,7 +77,7 @@ class Settings(BaseSettings):
             "Iloilo",
             "Cagayan de Oro",
         ],
-        description="Target Philippine cities for weather extraction",
+        description="Target Philippine cities for weather extraction (JSON array or comma-separated)",
     )
     log_level: str = Field(
         default="INFO",
@@ -70,14 +90,6 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
-
-    @field_validator("cities_list", mode="before")
-    @classmethod
-    def parse_cities_list(cls, v: Union[str, List[str]]) -> List[str]:
-        """Parse a comma-separated string into a list of city strings if needed."""
-        if isinstance(v, str):
-            return [city.strip() for city in v.split(",") if city.strip()]
-        return v
 
     @property
     def database_url(self) -> str:
