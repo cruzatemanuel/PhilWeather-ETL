@@ -164,7 +164,3 @@ Database Host: db.your-ref.supabase.co:5432/postgres
 - [ ] **Phase 12**: End-to-End Hardening & Security Audit
 - [ ] **Phase 13**: Final Documentation & Portfolio Polish
 
----
-
-## 📜 License
-MIT License. Free to use for educational and portfolio demonstration purposes.
