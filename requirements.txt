@@ -1,7 +1,0 @@
-# --- Core extraction / validation / load (Phases 1-4) ---
-requests>=2.31
-python-dotenv>=1.0        # required by pydantic-settings for .env file parsing
-pydantic>=2.5
-pydantic-settings>=2.1
-psycopg2-binary>=2.9
-tenacity>=8.2              # not used until Phase 2, listed now to avoid a second pass
