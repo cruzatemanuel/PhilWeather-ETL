@@ -2,16 +2,16 @@
 
 ## Project Goal
 
-Build a small, portfolio-ready ETL project that demonstrates fundamental Data Engineering skills by processing Philippine weather data from a CSV dataset.
+Build a small, portfolio-ready ETL (Extract, Transform, Load) pipeline that demonstrates fundamental Data Engineering skills by processing a 10-year historical weather dataset covering 137 cities in the Philippines (`daily_data_combined_2010_to_2019.csv`).
 
 The finished project should:
 
-- Read a real-world weather dataset (PSA/PAGASA)
-- Clean and transform the data using pandas
-- Load the cleaned data into PostgreSQL
-- Perform SQL analysis
-- Generate charts using matplotlib
-- Document the project professionally on GitHub
+- Read and parse a 500,000+ row daily weather dataset (2010–2019)
+- Clean, transform, and derive meaningful weather features using **pandas**
+- Load the normalized data into a **PostgreSQL** database with optimized indexes
+- Perform analytical SQL queries (aggregations, temporal trends, extreme weather detection, window functions)
+- Generate publication-quality visualizations using **matplotlib** & **seaborn**
+- Document the project professionally on GitHub as a ready-to-show portfolio piece
 
 **Target Completion:** 2 Weeks
 
@@ -19,14 +19,46 @@ The finished project should:
 
 # Tech Stack
 
-- Python
-- pandas
-- PostgreSQL
-- SQLAlchemy
-- SQL
-- matplotlib
-- Git
-- GitHub
+- **Language:** Python 3.10+
+- **Data Processing:** pandas, NumPy
+- **Database:** PostgreSQL 14+
+- **ORM / DB Driver:** SQLAlchemy, psycopg2-binary
+- **SQL Analysis:** PostgreSQL dialect (Aggregations, CTEs, Window Functions)
+- **Data Visualization:** matplotlib, seaborn
+- **Version Control:** Git, GitHub
+
+---
+
+# Data Dictionary (`daily_data_combined_2010_to_2019.csv`)
+
+The raw dataset contains **500,324 rows** across **24 columns**, representing 10 years (2010-01-01 to 2019-12-31) of daily ERA5 historical weather data for **137 Philippine cities**.
+
+| Field Name | Raw Type | Target SQL Type | Description | Sample Value |
+| :--- | :--- | :--- | :--- | :--- |
+| `city_name` | String | `VARCHAR(100)` | Name of the Philippine city | `'Alaminos'` |
+| `latitude` | Float | `DECIMAL(8,6)` | Geographic latitude coordinate | `16.156111` |
+| `longitude` | Float | `DECIMAL(9,6)` | Geographic longitude coordinate | `119.98111` |
+| `datetime` | String | `DATE` | Recording date (`YYYY-MM-DD`) | `'2010-01-01'` |
+| `weather_code` | Float | `SMALLINT` | WMO Weather interpretation code | `1.0` |
+| `temperature_2m_max` | Float | `DECIMAL(4,1)` | Maximum daily air temp at 2m (°C) | `29.9` |
+| `temperature_2m_min` | Float | `DECIMAL(4,1)` | Minimum daily air temp at 2m (°C) | `24.8` |
+| `temperature_2m_mean` | Float | `DECIMAL(4,1)` | Mean daily air temp at 2m (°C) | `26.6` |
+| `apparent_temperature_max` | Float | `DECIMAL(4,1)` | Max daily apparent temp / heat index (°C) | `32.0` |
+| `apparent_temperature_min` | Float | `DECIMAL(4,1)` | Min daily apparent temp / heat index (°C) | `26.5` |
+| `apparent_temperature_mean` | Float | `DECIMAL(4,1)` | Mean daily apparent temp / heat index (°C) | `29.1` |
+| `sunrise` | String | `TIMESTAMP` | Sunrise timestamp (`YYYY-MM-DDTHH:MM`) | `'2010-01-01T06:28'` |
+| `sunset` | String | `TIMESTAMP` | Sunset timestamp (`YYYY-MM-DDTHH:MM`) | `'2010-01-01T17:39'` |
+| `daylight_duration` | Float | `DECIMAL(8,2)` | Total daylight duration in seconds | `40269.62` |
+| `sunshine_duration` | Float | `DECIMAL(8,2)` | Total sunshine duration in seconds | `36331.94` |
+| `precipitation_sum` | Float | `DECIMAL(6,2)` | Total daily precipitation (mm) | `0.0` |
+| `rain_sum` | Float | `DECIMAL(6,2)` | Daily rain sum (mm) | `0.0` |
+| `snowfall_sum` | Float | `DECIMAL(4,2)` | Daily snowfall sum (always `0.0` in PH) | `0.0` |
+| `precipitation_hours` | Float | `DECIMAL(4,1)` | Hours with precipitation in a day | `0.0` |
+| `wind_speed_10m_max` | Float | `DECIMAL(5,1)` | Maximum wind speed at 10m (km/h) | `16.5` |
+| `wind_gusts_10m_max` | Float | `DECIMAL(5,1)` | Maximum wind gusts at 10m (km/h) | `33.5` |
+| `wind_direction_10m_dominant` | Float | `SMALLINT` | Dominant wind direction in degrees (0–360°) | `141.0` |
+| `shortwave_radiation_sum` | Float | `DECIMAL(6,2)` | Solar shortwave radiation sum (MJ/m²) | `18.63` |
+| `et0_fao_evapotranspiration` | Float | `DECIMAL(5,2)` | FAO reference evapotranspiration (mm) | `4.4` |
 
 ---
 
@@ -37,7 +69,9 @@ philweather-analytics/
 
 ├── data/
 │   ├── raw/
+│   │   └── daily_data_combined_2010_to_2019.csv
 │   └── cleaned/
+│       └── daily_weather_cleaned.csv
 │
 ├── scripts/
 │   ├── extract.py
@@ -46,15 +80,20 @@ philweather-analytics/
 │   └── visualize.py
 │
 ├── sql/
-│   ├── query_01.sql
-│   ├── query_02.sql
-│   ├── query_03.sql
-│   ├── query_04.sql
-│   └── query_05.sql
+│   ├── 01_hottest_cities.sql
+│   ├── 02_rainiest_cities.sql
+│   ├── 03_monthly_climate_profile.sql
+│   ├── 04_extreme_weather_events.sql
+│   └── 05_city_rainfall_ranking_window.sql
 │
 ├── charts/
+│   ├── monthly_temp_apparent_trend.png
+│   ├── top_10_rainiest_cities.png
+│   ├── top_10_hottest_cities_heat_index.png
+│   └── extreme_weather_scatter.png
 │
 ├── notebooks/
+│   └── data_exploration.ipynb
 │
 ├── README.md
 ├── ROADMAP.md
@@ -67,28 +106,31 @@ philweather-analytics/
 # Project Workflow
 
 ```text
-PSA / PAGASA CSV
+daily_data_combined_2010_to_2019.csv (500k+ rows, 137 cities)
         │
         ▼
-Python
-(Read CSV)
+extract.py
+(Read & Profile CSV Dataset)
         │
         ▼
-pandas
-(Clean Data)
+transform.py (pandas)
+(Data Cleaning, Type Casting, Feature Engineering & Validation)
         │
         ▼
-PostgreSQL
-(Load Data)
+load.py (SQLAlchemy / PostgreSQL)
+(Create Schema, Batch Load & Index city_name + datetime)
         │
         ▼
-SQL Analysis
+SQL Analysis (psycopg2 / SQL Scripts)
+(Aggregations, Heat Index Analysis, Typhoon Markers, Window Functions)
         │
         ▼
-matplotlib Charts
+visualize.py (matplotlib / seaborn)
+(Publication-Quality Charts & Trends)
         │
         ▼
-GitHub Portfolio
+GitHub Portfolio Presentation
+(Comprehensive README & Insights)
 ```
 
 ---
@@ -97,24 +139,22 @@ GitHub Portfolio
 
 ## Objective
 
-Prepare the development environment and repository.
+Prepare the development environment, database instance, and repository structure.
 
 ## Tasks
 
-- Create GitHub repository
-- Create project folder structure
-- Create Python virtual environment
-- Install dependencies
-- Configure PostgreSQL database
-- Create `.gitignore`
+- Create Python virtual environment (`venv`)
+- Install project dependencies (`pandas`, `sqlalchemy`, `psycopg2-binary`, `matplotlib`, `seaborn`)
+- Setup local PostgreSQL database (`philweather_db`)
+- Configure `.gitignore` (ignore `data/raw/*.csv`, virtual environments, and `.env`)
 - Create `requirements.txt`
+- Set up project directory tree
 
 ## Deliverables
 
-- Working repository
-- Virtual environment
-- PostgreSQL database
-- Initial Git commit
+- Clean, structured repository layout
+- Configured PostgreSQL database connection
+- Verified `requirements.txt`
 
 ---
 
@@ -122,22 +162,26 @@ Prepare the development environment and repository.
 
 ## Objective
 
-Understand the dataset before writing code.
+Analyze the raw CSV dataset (`daily_data_combined_2010_to_2019.csv`) to inform data cleaning rules and database schema design.
+
+## Key Dataset Characteristics Identified
+
+- **Record Count:** 500,324 daily records
+- **Coverage:** 137 unique Philippine cities across 10 calendar years (2010-01-01 to 2019-12-31; 3,652 days per city)
+- **Completeness:** 0 missing/null values across all 24 columns
+- **Special Characteristics:** `snowfall_sum` is uniformly `0.0` (tropical climate context); `sunrise` and `sunset` are ISO-formatted timestamp strings
 
 ## Tasks
 
-- Download PSA/PAGASA CSV dataset
-- Review documentation (if available)
-- Identify columns
-- Identify data types
-- Check missing values
-- Check duplicate rows
-- Determine required transformations
+- Write exploration script / Jupyter notebook (`notebooks/data_exploration.ipynb`)
+- Verify data types, value ranges, and unexpected values
+- Check for duplicate entries on composite key `(city_name, datetime)`
+- Calculate summary statistics (min/max temperatures, extreme precipitation, maximum wind speeds)
 
 ## Deliverables
 
-- Data exploration notes
-- Initial understanding of the dataset
+- Data profiling output and findings
+- Finalized schema definition mapping raw CSV columns to PostgreSQL data types
 
 ---
 
@@ -145,19 +189,18 @@ Understand the dataset before writing code.
 
 ## Objective
 
-Read the raw dataset into Python.
+Build a modular extraction script to safely load the 88+ MB dataset into memory.
 
 ## Tasks
 
-- Create `extract.py`
-- Load CSV with pandas
-- Validate file path
-- Display dataset information
-- Save exploration outputs if needed
+- Create `scripts/extract.py`
+- Define configurable file path parameters
+- Implement error handling for missing file or memory bottlenecks
+- Log extraction metadata (row counts, column list, execution time)
 
 ## Deliverables
 
-- Working extraction script
+- Modular `extract.py` script returning raw pandas DataFrame
 
 ---
 
@@ -165,23 +208,32 @@ Read the raw dataset into Python.
 
 ## Objective
 
-Clean and prepare the dataset for analysis.
+Clean raw weather data, cast data types, drop redundant features, and create derived analytical fields.
 
-## Tasks
+## Required Transformations
 
-- Remove duplicates
-- Handle missing values
-- Rename columns
-- Convert data types
-- Parse dates
-- Standardize column names
-- Validate cleaned data
-- Export cleaned CSV
+1. **Standardize Column Names:** Ensure snake_case naming matching SQL conventions.
+2. **Date & Time Parsing:**
+   - Convert `datetime` string to pandas `datetime64[ns]` / `DATE`.
+   - Parse `sunrise` and `sunset` into timestamp objects.
+3. **Feature Engineering:**
+   - `temp_range`: Calculate daily temperature swing (`temperature_2m_max` - `temperature_2m_min`).
+   - `heat_index_diff`: Difference between feels-like temperature and actual temperature (`apparent_temperature_mean` - `temperature_2m_mean`).
+   - `daylight_hours`: Convert `daylight_duration` seconds to hours (`daylight_duration / 3600`).
+   - `sunshine_hours`: Convert `sunshine_duration` seconds to hours (`sunshine_duration / 3600`).
+   - `year`, `month`, `year_month`: Temporal extraction for accelerated group-by queries.
+4. **Column Cleanup:**
+   - Drop `snowfall_sum` (redundant column with constant `0.0` value in tropical context).
+5. **Data Validation:**
+   - Validate temperature constraints (`min <= mean <= max`).
+   - Validate zero or positive bounds for precipitation and wind.
+6. **Export:**
+   - Export cleaned dataset to `data/cleaned/daily_weather_cleaned.csv` (optional for caching).
 
 ## Deliverables
 
-- Clean dataset
-- `transform.py`
+- Reusable `scripts/transform.py` module
+- Cleaned DataFrame ready for database insertion
 
 ---
 
@@ -189,21 +241,61 @@ Clean and prepare the dataset for analysis.
 
 ## Objective
 
-Load the cleaned dataset into PostgreSQL.
+Load the cleaned 500k+ weather dataset into PostgreSQL with optimized database schema and indexes.
+
+## Database Schema (`daily_weather`)
+
+```sql
+CREATE TABLE IF NOT EXISTS daily_weather (
+    id SERIAL PRIMARY KEY,
+    city_name VARCHAR(100) NOT NULL,
+    latitude DECIMAL(8,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL,
+    datetime DATE NOT NULL,
+    weather_code SMALLINT,
+    temperature_2m_max DECIMAL(4,1),
+    temperature_2m_min DECIMAL(4,1),
+    temperature_2m_mean DECIMAL(4,1),
+    apparent_temperature_max DECIMAL(4,1),
+    apparent_temperature_min DECIMAL(4,1),
+    apparent_temperature_mean DECIMAL(4,1),
+    sunrise TIMESTAMP,
+    sunset TIMESTAMP,
+    daylight_hours DECIMAL(4,2),
+    sunshine_hours DECIMAL(4,2),
+    precipitation_sum DECIMAL(6,2),
+    rain_sum DECIMAL(6,2),
+    precipitation_hours DECIMAL(4,1),
+    wind_speed_10m_max DECIMAL(5,1),
+    wind_gusts_10m_max DECIMAL(5,1),
+    wind_direction_10m_dominant SMALLINT,
+    shortwave_radiation_sum DECIMAL(6,2),
+    et0_fao_evapotranspiration DECIMAL(5,2),
+    temp_range DECIMAL(4,1),
+    heat_index_diff DECIMAL(4,1),
+    year SMALLINT,
+    month SMALLINT,
+    CONSTRAINT unique_city_date UNIQUE (city_name, datetime)
+);
+
+-- Optimization Indexes for 500,000+ Row Analytical Queries
+CREATE INDEX idx_weather_city ON daily_weather(city_name);
+CREATE INDEX idx_weather_datetime ON daily_weather(datetime);
+CREATE INDEX idx_weather_city_date ON daily_weather(city_name, datetime);
+CREATE INDEX idx_weather_year_month ON daily_weather(year, month);
+```
 
 ## Tasks
 
-- Create database connection
-- Configure SQLAlchemy
-- Create weather table
-- Load cleaned data
-- Verify row count
-- Validate imported records
+- Create `scripts/load.py` using SQLAlchemy engine
+- Execute DDL to initialize `daily_weather` table and indexes
+- Perform high-performance batch insertion (`method='multi'`, `chunksize=10000`)
+- Verify row counts against transformed dataset (target: 500,324 rows)
 
 ## Deliverables
 
-- Populated PostgreSQL table
-- `load.py`
+- Automated database setup and load script (`load.py`)
+- Populated PostgreSQL `daily_weather` table
 
 ---
 
@@ -211,43 +303,38 @@ Load the cleaned dataset into PostgreSQL.
 
 ## Objective
 
-Answer analytical questions using SQL.
+Extract meaningful meteorological insights from PostgreSQL using optimized SQL queries leveraging the dataset's specific fields.
 
 ## Required Queries
 
-### Query 1
+### Query 1: Top 10 Hottest Cities by Peak Heat Index & Temperature
+- **Filename:** `sql/01_hottest_cities.sql`
+- **Fields Used:** `city_name`, `temperature_2m_max`, `apparent_temperature_max`, `heat_index_diff`
+- **Goal:** Rank cities by their average maximum temperature and maximum apparent heat index across 2010–2019.
 
-Top 10 hottest locations
+### Query 2: Top 10 Wettest Cities & Annual Precipitation
+- **Filename:** `sql/02_rainiest_cities.sql`
+- **Fields Used:** `city_name`, `precipitation_sum`, `precipitation_hours`
+- **Goal:** Calculate total accumulated rainfall and annual average precipitation by city to identify the wettest urban areas.
 
-### Query 2
+### Query 3: Monthly Climate Profile & Seasonal Heat Difference
+- **Filename:** `sql/03_monthly_climate_profile.sql`
+- **Fields Used:** `month`, `temperature_2m_mean`, `apparent_temperature_mean`, `precipitation_sum`, `shortwave_radiation_sum`
+- **Goal:** Aggregate 10-year monthly averages to chart the Philippines' wet and dry seasons and highlight months with extreme heat index gaps.
 
-Average rainfall by province
+### Query 4: Extreme Weather Events & Severe Gust / Rainfall Days (Typhoon Markers)
+- **Filename:** `sql/04_extreme_weather_events.sql`
+- **Fields Used:** `city_name`, `datetime`, `precipitation_sum`, `wind_gusts_10m_max`, `wind_speed_10m_max`
+- **Goal:** Filter and count severe weather days (precipitation > 100mm/day or wind gusts > 60 km/h) per city and year.
 
-### Query 3
-
-Monthly average temperature
-
-### Query 4
-
-Highest recorded rainfall
-
-### Query 5
-
-Window Function
-
-Use one of:
-
-- `RANK()`
-- `ROW_NUMBER()`
-- `DENSE_RANK()`
-
-Example:
-
-Rank provinces by average temperature.
+### Query 5: Window Function — Ranking City Annual Rainfall per Year
+- **Filename:** `sql/05_city_rainfall_ranking_window.sql`
+- **Fields Used:** `city_name`, `year`, `precipitation_sum`, `DENSE_RANK()` / `ROW_NUMBER()`
+- **Goal:** Use SQL Window functions (`DENSE_RANK() OVER (PARTITION BY year ORDER BY sum_rain DESC)`) to rank the top 5 wettest cities for every individual year from 2010 to 2019.
 
 ## Deliverables
 
-- Five SQL query files
+- 5 executable `.sql` files in `sql/` directory with detailed comments
 
 ---
 
@@ -255,32 +342,34 @@ Rank provinces by average temperature.
 
 ## Objective
 
-Create charts from the analyzed data.
+Generate publication-ready visualizations using `matplotlib` and `seaborn` to summarize SQL insights.
 
 ## Required Charts
 
-### Chart 1
+### Chart 1: 10-Year Monthly Temperature vs. Apparent Heat Index Trend
+- **Filename:** `charts/monthly_temp_apparent_trend.png`
+- **Type:** Dual Line Chart with shaded area
+- **Content:** Compares actual mean temperature (`temperature_2m_mean`) against felt apparent temperature (`apparent_temperature_mean`) by month.
 
-Monthly Temperature Trend
+### Chart 2: Top 10 Rainiest Cities in the Philippines
+- **Filename:** `charts/top_10_rainiest_cities.png`
+- **Type:** Vertical Bar Chart with value labels
+- **Content:** Displays average annual rainfall (mm) for the top 10 wettest Philippine cities.
 
-(Line Chart)
+### Chart 3: Top 10 Hottest Cities by Peak Heat Index
+- **Filename:** `charts/top_10_hottest_cities_heat_index.png`
+- **Type:** Horizontal Bar Chart (gradient colored)
+- **Content:** Ranks the hottest cities by highest recorded apparent temperature (`apparent_temperature_max`).
 
-### Chart 2
-
-Average Rainfall by Province
-
-(Bar Chart)
-
-### Chart 3
-
-Top 10 Hottest Locations
-
-(Horizontal Bar Chart)
+### Chart 4: Extreme Weather Event Frequency (Rainfall vs. Wind Gusts)
+- **Filename:** `charts/extreme_weather_scatter.png`
+- **Type:** Scatter / Bubble Plot
+- **Content:** Maps daily precipitation against maximum wind gusts for extreme weather days to visualize tropical storm clusters.
 
 ## Deliverables
 
-- Three PNG charts
-- `visualize.py`
+- `scripts/visualize.py` script
+- 4 high-resolution PNG charts saved in `charts/`
 
 ---
 
@@ -288,25 +377,18 @@ Top 10 Hottest Locations
 
 ## Objective
 
-Create a professional GitHub repository.
+Create a comprehensive, portfolio-ready GitHub `README.md`.
 
-## README Sections
+## README Requirements
 
-- Project Overview
-- Dataset
-- Tech Stack
-- ETL Workflow
-- Database Schema
-- SQL Analysis
-- Charts
-- Key Findings
-- Future Improvements
-- Installation Guide
-- How to Run
-
-## Key Findings
-
-Document at least three meaningful insights discovered through the analysis.
+1. **Title & Badge:** Clean title with project metadata tags.
+2. **Executive Summary:** Overview of the 10-year Philippine weather dataset (500k+ rows, 137 cities).
+3. **Architecture Diagram:** ASCII or graphic ETL flow diagram.
+4. **Data Dictionary:** Formatted table of raw and transformed fields.
+5. **Key Analytical Insights:** Summarized findings from SQL queries (e.g. hottest cities, rainiest regions, seasonality).
+6. **Visualizations Showcase:** Embedded chart previews with commentary.
+7. **Database Schema & SQL Queries:** Key SQL queries with window functions documented.
+8. **Instructions to Run:** Step-by-step setup guide (`pip install`, database creation, script execution order).
 
 ---
 
@@ -314,72 +396,49 @@ Document at least three meaningful insights discovered through the analysis.
 
 ## Objective
 
-Prepare the repository for publication.
+Validate system end-to-end and clean repository for publication.
 
 ## Checklist
 
-- Code follows PEP 8
-- Repository is organized
-- No unused files
-- SQL queries tested
-- Charts generated
-- README completed
-- `.gitignore` configured
-- No credentials committed
-- Requirements file updated
-- Git history is clean
+- [ ] All code adheres to PEP 8 standard formatting
+- [ ] No hardcoded database credentials or secrets (`use environment variables / config`)
+- [ ] `.gitignore` accurately ignores raw CSV data and temporary build files
+- [ ] Database ingestion verified (exact row count check: 500,324 rows)
+- [ ] All 5 SQL scripts execute cleanly without errors
+- [ ] All 4 charts generated successfully at 300 DPI
+- [ ] `README.md` is complete with clear setup instructions and embedded images
 
 ---
 
 # Timeline
 
-## Week 1
+## Week 1: Core Pipeline & Database
+- Days 1–2: Setup environment, explore CSV dataset, write `extract.py` & `transform.py`
+- Days 3–4: Design PostgreSQL schema, write `load.py`, execute batch loading for 500k rows
+- Day 5: Validate database integrity and index performance
 
-- Project setup
-- Dataset selection
-- Data exploration
-- Extract
-- Transform
-- Load into PostgreSQL
-
-## Week 2
-
-- SQL analysis
-- Charts
-- README
-- Repository cleanup
-- Final testing
-- Push to GitHub
+## Week 2: SQL Analysis, Visualization & Portfolio
+- Days 6–7: Write and test 5 SQL analysis scripts (including window functions)
+- Days 8–9: Create `visualize.py` and generate high-res matplotlib/seaborn charts
+- Days 10: Write `README.md`, perform code audit, and push project to GitHub
 
 ---
 
 # Success Criteria
 
-By the end of this project, the repository should include:
-
-- A real-world Philippine weather dataset
-- Python ETL scripts
-- PostgreSQL database integration
-- Five SQL analysis queries
-- At least one window function
-- Three matplotlib charts
-- A professional README
-- Clean project structure
-- Meaningful analytical findings
+- Complete ETL execution: `Extract` -> `Transform` -> `Load` -> `Analyze` -> `Visualize`
+- 500,324 weather rows successfully cleaned and loaded into PostgreSQL
+- 5 SQL query files answering specific weather analytics questions
+- At least one advanced SQL window function (`DENSE_RANK()`, `AVG() OVER()`)
+- 4 publication-grade visualization PNGs
+- Complete, impressive GitHub portfolio repository
 
 ---
 
 # Future Enhancements
 
-Once this project is complete, future versions could include:
-
-- Scheduled ETL with Apache Airflow
-- Data transformations with dbt
-- Docker containerization
-- Interactive dashboards (Metabase)
-- Live weather API ingestion
-- Data quality testing
-- CI/CD with GitHub Actions
-- Cloud deployment
-
-These enhancements are intentionally out of scope for Version 1 to keep the project focused, achievable, and portfolio-ready within two weeks.
+- **Automated Workflow Orchestration:** Schedule daily pipeline runs using Apache Airflow or Prefect.
+- **Modern Data Stack Integration:** Use **dbt** for data transformations and testing within PostgreSQL.
+- **Containerization:** Wrap PostgreSQL and Python ETL scripts in Docker & Docker Compose.
+- **Interactive Dashboard:** Build a Streamlit or Metabase web application for interactive filtering across the 137 Philippine cities.
+- **Live Weather API Ingestion:** Integrate Open-Meteo or PAGASA live APIs for real-time daily weather updates.
