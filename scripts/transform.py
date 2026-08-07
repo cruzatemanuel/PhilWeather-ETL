@@ -41,8 +41,12 @@ def transform_weather_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed["sunrise"] = pd.to_datetime(transformed["sunrise"])
     transformed["sunset"] = pd.to_datetime(transformed["sunset"])
 
-    # 2. Temporal Extractions
-    print("2. Extracting temporal features (year, month)...")
+    # 2. Temporal & Integer Type Extractions
+    print("2. Casting integer fields & extracting temporal features (year, month)...")
+    if "weather_code" in transformed.columns:
+        transformed["weather_code"] = transformed["weather_code"].astype("Int16")
+    if "wind_direction_10m_dominant" in transformed.columns:
+        transformed["wind_direction_10m_dominant"] = transformed["wind_direction_10m_dominant"].astype("Int16")
     transformed["year"] = pd.to_datetime(transformed["datetime"]).dt.year.astype("int16")
     transformed["month"] = pd.to_datetime(transformed["datetime"]).dt.month.astype("int8")
 
