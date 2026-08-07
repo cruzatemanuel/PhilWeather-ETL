@@ -1,5 +1,6 @@
 """Unit tests for Phase 3 Extraction module."""
 
+# pyrefly: ignore [missing-import]
 import pytest
 import pandas as pd
 from scripts.extract import extract_weather_data, extract_units_metadata, DEFAULT_DATA_PATH, DEFAULT_UNITS_PATH
